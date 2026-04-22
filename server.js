@@ -10,6 +10,10 @@ app.use(cors());
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
 // ==============================
 // 🐘 CONEXÃO COM NEON.TECH (POSTGRES)
 // ==============================
