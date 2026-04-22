@@ -1,127 +1,127 @@
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
+const { Pool } = require("pg"); // Mudamos de sqlite3 para pg
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Servir HTML
+// Servir arquivos estáticos da pasta "public"
 app.use(express.static(path.join(__dirname, "public")));
 
 // ==============================
-// 🔒 PERSISTÊNCIA DO BANCO (RENDER)
+// 🐘 CONFIGURAÇÃO DO POSTGRESQL
 // ==============================
-const dbPath = process.env.DB_PATH || path.join(__dirname, "banco.db");
+// O Render fornece a "External Database URL" nas configurações do banco.
+// No ambiente do Render, ele usará a variável de ambiente DATABASE_URL.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Obrigatório para conexões seguras no Render/Heroku
+  }
+});
 
-// garante que a pasta existe (importante no Render)
-const dbDir = path.dirname(dbPath);
+// Criar tabela se não existir (Sintaxe Postgres)
+const initDB = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS confirmacoes (
+        id SERIAL PRIMARY KEY,
+        nome TEXT,
+        email TEXT,
+        status TEXT,
+        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log("Banco de dados pronto (PostgreSQL)");
+  } catch (err) {
+    console.error("Erro ao inicializar banco:", err);
+  }
+};
+initDB();
 
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
-
-// Banco de dados
-const db = new sqlite3.Database(dbPath);
-
-// Criar tabela
-db.run(`
-CREATE TABLE IF NOT EXISTS confirmacoes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome TEXT,
-  email TEXT,
-  status TEXT,
-  data TEXT
-)
-`);
-
-// rota /admin
+// Rota /admin
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "public\\admin.html"));
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 // Rota para salvar confirmação
-app.post("/confirmar", (req, res) => {
+app.post("/confirmar", async (req, res) => {
   const { nome, email, status } = req.body;
 
   if (!nome || !email) {
     return res.status(400).json({ erro: "Preencha todos os campos" });
   }
 
-  db.run(
-    "INSERT INTO confirmacoes (nome, email, status, data) VALUES (?, ?, ?, datetime('now'))",
-    [nome, email, status],
-    function (err) {
-      if (err) return res.status(500).json(err);
-      res.json({ sucesso: true });
-    }
-  );
+  try {
+    await pool.query(
+      "INSERT INTO confirmacoes (nome, email, status) VALUES ($1, $2, $3)",
+      [nome, email, status]
+    );
+    res.json({ sucesso: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: "Erro ao salvar no banco" });
+  }
 });
 
 // Listar confirmações
-app.get("/lista", (req, res) => {
-  db.all("SELECT * FROM confirmacoes ORDER BY id DESC", [], (err, rows) => {
-    if (err) return res.status(500).json(err);
-    res.json(rows);
-  });
+app.get("/lista", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM confirmacoes ORDER BY id DESC");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ erro: "Erro ao buscar dados" });
+  }
 });
 
 // Deletar confirmação
-app.delete("/deletar/:id", (req, res) => {
+app.delete("/deletar/:id", async (req, res) => {
   const { id } = req.params;
 
-  if (!id || isNaN(id)) {
-    return res.status(400).json({ erro: "ID inválido" });
-  }
-
-  db.run(
-    "DELETE FROM confirmacoes WHERE id = ?",
-    [parseInt(id)],
-    function (err) {
-      if (err) {
-        console.error("Erro ao deletar:", err);
-        return res.status(500).json({ erro: "Erro ao deletar item" });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ erro: "Item não encontrado" });
-      }
-      res.json({ sucesso: true, mensagem: "Item deletado com sucesso" });
+  try {
+    const result = await pool.query("DELETE FROM confirmacoes WHERE id = $1", [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ erro: "Item não encontrado" });
     }
-  );
+    res.json({ sucesso: true, mensagem: "Item deletado com sucesso" });
+  } catch (err) {
+    res.status(500).json({ erro: "Erro ao deletar item" });
+  }
 });
 
 // Exportar como CSV
-app.get("/exportar-csv", (req, res) => {
-  db.all("SELECT * FROM confirmacoes ORDER BY id DESC", [], (err, rows) => {
-    if (err) return res.status(500).json(err);
-
+app.get("/exportar-csv", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM confirmacoes ORDER BY id DESC");
     let csv = "ID,Nome,Email,Status,Data\n";
-    rows.forEach((row) => {
+    result.rows.forEach((row) => {
       csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${row.data}"\n`;
     });
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="confirmacoes.csv"`);
+    res.setHeader("Content-Disposition", 'attachment; filename="confirmacoes.csv"');
     res.send(csv);
-  });
+  } catch (err) {
+    res.status(500).send("Erro ao gerar CSV");
+  }
 });
 
 // Exportar como JSON
-app.get("/exportar-json", (req, res) => {
-  db.all("SELECT * FROM confirmacoes ORDER BY id DESC", [], (err, rows) => {
-    if (err) return res.status(500).json(err);
-
+app.get("/exportar-json", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM confirmacoes ORDER BY id DESC");
     res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="confirmacoes.json"`);
-    res.send(JSON.stringify(rows, null, 2));
-  });
+    res.setHeader("Content-Disposition", 'attachment; filename="confirmacoes.json"');
+    res.send(JSON.stringify(result.rows, null, 2));
+  } catch (err) {
+    res.status(500).send("Erro ao gerar JSON");
+  }
 });
 
 // Iniciar servidor
-app.listen(3000, () => {
-  console.log("Servidor rodando em http://localhost:3000");
-  console.log("Painel admin: http://localhost:3000/admin.html");
-  console.log("Senha padrão: admin123");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
