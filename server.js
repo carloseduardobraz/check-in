@@ -24,6 +24,11 @@ CREATE TABLE IF NOT EXISTS confirmacoes (
 )
 `);
 
+// rota /admin
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "public\admin.html"));
+});
+
 // Rota para salvar confirmação
 app.post("/confirmar", (req, res) => {
   const { nome, email, status } = req.body;
