@@ -2,6 +2,7 @@ const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 app.use(express.json());
@@ -10,8 +11,20 @@ app.use(cors());
 // Servir HTML
 app.use(express.static(path.join(__dirname, "public")));
 
+// ==============================
+// 🔒 PERSISTÊNCIA DO BANCO (RENDER)
+// ==============================
+const dbPath = process.env.DB_PATH || path.join(__dirname, "banco.db");
+
+// garante que a pasta existe (importante no Render)
+const dbDir = path.dirname(dbPath);
+
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
 // Banco de dados
-const db = new sqlite3.Database("banco.db");
+const db = new sqlite3.Database(dbPath);
 
 // Criar tabela
 db.run(`
@@ -26,7 +39,7 @@ CREATE TABLE IF NOT EXISTS confirmacoes (
 
 // rota /admin
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "public\admin.html"));
+  res.sendFile(path.join(__dirname, "public", "public\\admin.html"));
 });
 
 // Rota para salvar confirmação
@@ -84,7 +97,6 @@ app.get("/exportar-csv", (req, res) => {
   db.all("SELECT * FROM confirmacoes ORDER BY id DESC", [], (err, rows) => {
     if (err) return res.status(500).json(err);
 
-    // Criar CSV
     let csv = "ID,Nome,Email,Status,Data\n";
     rows.forEach((row) => {
       csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${row.data}"\n`;
