@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin</title>
+  <link rel="stylesheet" href="admin-style.css">
+</head>
+
+<body>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1>Painel Admin</h1>
+    <button id="btnSair" class="btn-sair">Sair</button>
+  </div>
+
+  <div class="admin-content">
+    <div class="stats-section">
+      <h2>Estatísticas</h2>
+      <div class="stats-cards">
+        <div class="stat-card">
+          <span class="stat-label">Total de Confirmações</span>
+          <span class="stat-number" id="totalConfirmacoes">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Confirmados</span>
+          <span class="stat-number confirmado" id="totalConfirmados">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="export-section">
+      <h2>Exportar Dados</h2>
+      <div class="export-buttons">
+        <button id="btnExportarCSV" class="btn-export">
+          📥 Exportar como CSV
+        </button>
+        <button id="btnExportarJSON" class="btn-export">
+          📥 Exportar como JSON
+        </button>
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2>Lista de Confirmações</h2>
+      <div class="table-container">
+        <table id="tabela-dados">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-dados">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div id="modalExcluir" class="modal-excluir">
+  <div class="modal-excluir-content">
+    <div class="modal-excluir-header">
+      <span class="modal-excluir-icon">⚠️</span>
+    </div>
+    <h2>Confirmar Exclusão</h2>
+    <p>Tem certeza que deseja deletar este item?</p>
+    <p style="font-size: 13px; color: #999; margin-top: 10px;">Esta ação não pode ser desfeita.</p>
+    <div class="modal-excluir-buttons">
+      <button id="btnCancelarExclusao" class="btn-cancelar">Cancelar</button>
+      <button id="btnConfirmarExclusao" class="btn-deletar-modal">Deletar</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin-script.js"></script>
+</body>
+</html>

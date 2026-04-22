@@ -1,0 +1,264 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh; /* dvh respeita a barra do navegador mobile */
+  padding: 24px 16px;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  background: white;
+  padding: 32px 24px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+select,
+button,
+input {
+  width: 100%;
+  padding: 14px 12px;
+  margin-top: 14px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+button {
+  background: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+button:hover {
+  background: #218838;
+}
+
+button:active {
+  background: #1e7e34;
+  transform: scale(0.98);
+}
+
+#mensagem {
+  margin-top: 18px;
+  font-weight: bold;
+  font-size: 15px;
+  color: green;
+}
+
+/* --- Celular --- */
+@media (max-width: 480px) {
+  body {
+    padding: 16px 12px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .container {
+    padding: 28px 20px;
+    border-radius: 10px;
+    width: 100%;
+  }
+
+  h1, h2, h3 {
+    font-size: 1.3rem;
+  }
+
+  p, label {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  select,
+  input {
+    font-size: 16px; /* evita zoom no iOS */
+    padding: 14px 10px;
+    margin-top: 12px;
+  }
+
+  button {
+    padding: 16px;
+    font-size: 1rem;
+    margin-top: 16px;
+  }
+
+  #mensagem {
+    font-size: 1rem;
+    margin-top: 16px;
+  }
+}
+
+/* --- Telas muito pequenas (< 360px) --- */
+@media (max-width: 360px) {
+  .container {
+    padding: 20px 14px;
+  }
+
+  h1, h2, h3 {
+    font-size: 1.1rem;
+  }
+
+  select, input, button {
+    font-size: 15px;
+    padding: 13px 10px;
+  }
+}
+
+/* --- Modal Pop-up --- */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal.show {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 40px 30px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  margin-bottom: 20px;
+}
+
+.modal-header.error {
+  background: #ff6b6b;
+}
+
+.modal-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  font-size: 40px;
+  font-weight: bold;
+  margin: 0 auto;
+}
+
+.modal-header.error .modal-icon {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.modal-content h2 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 24px;
+}
+
+.modal-content p {
+  color: #666;
+  margin-bottom: 25px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.btn-fechar-modal {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 12px 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.btn-fechar-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-fechar-modal.btn-erro {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.btn-fechar-modal.btn-erro:hover {
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+/* --- Responsividade Modal --- */
+@media (max-width: 480px) {
+  .modal-content {
+    padding: 30px 20px;
+    max-width: 90%;
+  }
+
+  .modal-icon {
+    width: 70px;
+    height: 70px;
+    font-size: 35px;
+  }
+
+  .modal-content h2 {
+    font-size: 20px;
+  }
+
+  .modal-content p {
+    font-size: 15px;
+  }
+
+  .btn-fechar-modal {
+    padding: 10px 30px;
+    font-size: 15px;
+  }
+}

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmação de Presença</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Confirme sua presença</h2>
+
+  <input type="text" id="nome" placeholder="Seu nome">
+  <input type="email" id="email" placeholder="Seu e-mail">
+
+  <select id="status">
+    <option value="Confirmado">Confirmar</option>
+  </select>
+
+  <button id="btnConfirmar">Confirmar</button>
+</div>
+
+<!-- Modal Pop-up -->
+<div id="modalSucesso" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-icon">✓</span>
+    </div>
+    <h2>Sucesso!</h2>
+    <p>Sua presença foi confirmada com sucesso!</p>
+    <button id="btnFecharModal" class="btn-fechar-modal">Fechar</button>
+  </div>
+</div>
+
+<!-- Modal de Erro -->
+<div id="modalErro" class="modal">
+  <div class="modal-content modal-error">
+    <div class="modal-header error">
+      <span class="modal-icon">✕</span>
+    </div>
+    <h2 id="tituloErro">Erro</h2>
+    <p id="textoErro">Ocorreu um erro. Tente novamente.</p>
+    <button id="btnFecharErro" class="btn-fechar-modal btn-erro">Fechar</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
