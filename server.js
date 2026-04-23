@@ -1,5 +1,5 @@
 const express = require("express");
-const { Pool } = require("pg"); // Mudou para pg
+const { Pool } = require("pg");
 const cors = require("cors");
 const path = require("path");
 
@@ -10,6 +10,7 @@ app.use(cors());
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
+// Rotas de páginas
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
@@ -19,16 +20,26 @@ app.get("/login", (req, res) => {
 });
 
 // ==============================
-// 🐘 CONEXÃO COM NEON.TECH (POSTGRES)
+// 🐘 CONEXÃO COM POSTGRES (Neon)
 // ==============================
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // Você pegará essa URL no painel do Neon
+  connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Obrigatório para o Neon/Render
+    rejectUnauthorized: false
   }
 });
 
-// Criar tabela (Sintaxe Postgres é levemente diferente)
+// ==============================
+// 🧠 FUNÇÃO DE FORMATAÇÃO DE DATA
+// ==============================
+const formatarData = (data) =>
+  new Date(data).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo"
+  });
+
+// ==============================
+// 📦 CRIAR TABELA
+// ==============================
 const initDb = async () => {
   try {
     await pool.query(`
@@ -37,7 +48,7 @@ const initDb = async () => {
         nome TEXT,
         email TEXT,
         status TEXT,
-        data TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        data TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log("Banco de dados pronto!");
@@ -47,12 +58,9 @@ const initDb = async () => {
 };
 initDb();
 
-// Rota /admin
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
-});
-
-// Rota para salvar confirmação
+// ==============================
+// 📌 SALVAR CONFIRMAÇÃO
+// ==============================
 app.post("/confirmar", async (req, res) => {
   const { nome, email, status } = req.body;
 
@@ -72,60 +80,104 @@ app.post("/confirmar", async (req, res) => {
   }
 });
 
-// Listar confirmações
+// ==============================
+// 📋 LISTAR CONFIRMAÇÕES
+// ==============================
 app.get("/lista", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM confirmacoes ORDER BY id DESC");
-    res.json(result.rows);
+    const result = await pool.query(
+      "SELECT * FROM confirmacoes ORDER BY id DESC"
+    );
+
+    const dadosFormatados = result.rows.map((row) => ({
+      ...row,
+      data: formatarData(row.data)
+    }));
+
+    res.json(dadosFormatados);
   } catch (err) {
     res.status(500).json({ erro: "Erro ao listar" });
   }
 });
 
-// Deletar confirmação
+// ==============================
+// ❌ DELETAR CONFIRMAÇÃO
+// ==============================
 app.delete("/deletar/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query("DELETE FROM confirmacoes WHERE id = $1", [id]);
+    const result = await pool.query(
+      "DELETE FROM confirmacoes WHERE id = $1",
+      [id]
+    );
+
     if (result.rowCount === 0) {
       return res.status(404).json({ erro: "Item não encontrado" });
     }
+
     res.json({ sucesso: true, mensagem: "Item deletado com sucesso" });
   } catch (err) {
     res.status(500).json({ erro: "Erro ao deletar" });
   }
 });
 
-// Exportar CSV
+// ==============================
+// 📤 EXPORTAR CSV
+// ==============================
 app.get("/exportar-csv", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM confirmacoes ORDER BY id DESC");
+    const result = await pool.query(
+      "SELECT * FROM confirmacoes ORDER BY id DESC"
+    );
+
     let csv = "ID,Nome,Email,Status,Data\n";
+
     result.rows.forEach((row) => {
-      csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${row.data}"\n`;
+      csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${formatarData(row.data)}"\n`;
     });
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", 'attachment; filename="confirmacoes.csv"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="confirmacoes.csv"'
+    );
+
     res.send(csv);
   } catch (err) {
     res.status(500).send("Erro ao gerar CSV");
   }
 });
 
-// Exportar JSON
+// ==============================
+// 📤 EXPORTAR JSON
+// ==============================
 app.get("/exportar-json", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM confirmacoes ORDER BY id DESC");
+    const result = await pool.query(
+      "SELECT * FROM confirmacoes ORDER BY id DESC"
+    );
+
+    const dadosFormatados = result.rows.map((row) => ({
+      ...row,
+      data: formatarData(row.data)
+    }));
+
     res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.setHeader("Content-Disposition", 'attachment; filename="confirmacoes.json"');
-    res.send(JSON.stringify(result.rows, null, 2));
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="confirmacoes.json"'
+    );
+
+    res.send(JSON.stringify(dadosFormatados, null, 2));
   } catch (err) {
     res.status(500).send("Erro ao gerar JSON");
   }
 });
 
+// ==============================
+// 🚀 INICIAR SERVIDOR
+// ==============================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
