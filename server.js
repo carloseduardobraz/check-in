@@ -37,7 +37,7 @@ const initDb = async () => {
         nome TEXT,
         email TEXT,
         status TEXT,
-        data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        data TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log("Banco de dados pronto!");
