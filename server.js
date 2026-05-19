@@ -138,13 +138,16 @@ app.get("/exportar-csv", async (req, res) => {
       csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${formatarData(row.data)}"\n`;
     });
 
+    const bom = "\uFEFF";
+    const csvBuffer = Buffer.from(bom + csv, "utf8");
+
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       'attachment; filename="confirmacoes.csv"'
     );
 
-    res.send(csv);
+    res.send(csvBuffer);
   } catch (err) {
     res.status(500).send("Erro ao gerar CSV");
   }
