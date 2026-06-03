@@ -62,7 +62,8 @@ async function confirmar() {
       status,
       lat: location ? location.lat : null,
       lon: location ? location.lon : null,
-      location_source: location ? location.source : null
+      location_source: location ? location.source : null,
+      location_accuracy: location && typeof location.accuracy === 'number' ? location.accuracy : null
     };
 
     const resposta = await fetch("/confirmar", {
@@ -97,32 +98,67 @@ function limparCampos() {
 // ==============================
 // Geolocalização (apenas ao confirmar)
 // ==============================
-function getLocationWithTimeout(timeoutMs = 8000) {
+function getLocationWithTimeout(timeoutMs = 8000, desiredAccuracy = 30) {
   return new Promise((resolve) => {
-    let settled = false;
+    if (!navigator.geolocation) {
+      (async () => resolve(await fallbackByIP()))();
+      return;
+    }
+
+    let watchId = null;
+    let best = null;
+    let finished = false;
 
     function finish(result) {
-      if (settled) return;
-      settled = true;
+      if (finished) return;
+      finished = true;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
       resolve(result);
     }
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        finish({ lat: pos.coords.latitude, lon: pos.coords.longitude, source: 'geolocation' });
-      }, async () => {
-        const ip = await fallbackByIP();
-        finish(ip);
-      }, { enableHighAccuracy: true, timeout: timeoutMs });
+    function onSuccess(pos) {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const accuracy = typeof pos.coords.accuracy === 'number' ? pos.coords.accuracy : Infinity;
+      // Keep best (smallest) accuracy
+      if (!best || accuracy < best.accuracy) {
+        best = { lat, lon, accuracy };
+      }
 
-      // Timeout fallback
-      setTimeout(async () => {
+      // If we already have a sufficiently accurate reading, finish early
+      if (accuracy <= desiredAccuracy) {
+        finish({ lat, lon, source: 'geolocation', accuracy });
+      }
+    }
+
+    async function onError(err) {
+      // On error, fallback to IP
+      const ip = await fallbackByIP();
+      finish(ip);
+    }
+
+    // Start watching for positions to gather multiple samples
+    try {
+      watchId = navigator.geolocation.watchPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: timeoutMs
+      });
+    } catch (e) {
+      // If watchPosition throws, fall back
+      (async () => finish(await fallbackByIP()))();
+      return;
+    }
+
+    // After timeout, choose best sample (if any) or fallback
+    setTimeout(async () => {
+      if (best) {
+        finish({ lat: best.lat, lon: best.lon, source: 'geolocation', accuracy: best.accuracy });
+      } else {
         const ip = await fallbackByIP();
         finish(ip);
-      }, timeoutMs + 200);
-    } else {
-      (async () => finish(await fallbackByIP()))();
-    }
+      }
+    }, timeoutMs);
   });
 }
 

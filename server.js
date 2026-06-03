@@ -52,6 +52,7 @@ const initDb = async () => {
         lat DOUBLE PRECISION,
         lon DOUBLE PRECISION,
         location_source TEXT,
+        location_accuracy DOUBLE PRECISION,
         data TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -74,7 +75,7 @@ initDb();
 // 📌 SALVAR CONFIRMAÇÃO
 // ==============================
 app.post("/confirmar", async (req, res) => {
-  const { nome, email, status, lat, lon, location_source } = req.body;
+  const { nome, email, status, lat, lon, location_source, location_accuracy } = req.body;
 
   if (!nome || !email) {
     return res.status(400).json({ erro: "Preencha todos os campos" });
@@ -82,8 +83,8 @@ app.post("/confirmar", async (req, res) => {
 
   try {
     await pool.query(
-      "INSERT INTO confirmacoes (nome, email, status, lat, lon, location_source) VALUES ($1, $2, $3, $4, $5, $6)",
-      [nome, email, status, lat || null, lon || null, location_source || null]
+      "INSERT INTO confirmacoes (nome, email, status, lat, lon, location_source, location_accuracy) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [nome, email, status, lat || null, lon || null, location_source || null, location_accuracy || null]
     );
     res.json({ sucesso: true });
   } catch (err) {
@@ -143,10 +144,14 @@ app.get("/exportar-csv", async (req, res) => {
       "SELECT * FROM confirmacoes ORDER BY id DESC"
     );
 
-    let csv = "ID,Nome,Email,Status,Data\n";
+    let csv = "ID,Nome,Email,Status,Lat,Lon,Source,Accuracy,Data\n";
 
     result.rows.forEach((row) => {
-      csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${formatarData(row.data)}"\n`;
+      const lat = row.lat != null ? row.lat : '';
+      const lon = row.lon != null ? row.lon : '';
+      const src = row.location_source ? row.location_source : '';
+      const acc = row.location_accuracy != null ? row.location_accuracy : '';
+      csv += `${row.id},"${row.nome}","${row.email}","${row.status}","${lat}","${lon}","${src}","${acc}","${formatarData(row.data)}"\n`;
     });
 
     const bom = "\uFEFF";
