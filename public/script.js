@@ -47,13 +47,30 @@ async function confirmar() {
     return;
   }
 
+  // Tenta obter localização antes de enviar (timeout para não bloquear)
+  let location = null;
   try {
+    location = await getLocationWithTimeout(8000); // 8s
+  } catch (e) {
+    console.warn('Erro ao obter localização antes de confirmar:', e);
+  }
+
+  try {
+    const payload = {
+      nome,
+      email,
+      status,
+      lat: location ? location.lat : null,
+      lon: location ? location.lon : null,
+      location_source: location ? location.source : null
+    };
+
     const resposta = await fetch("/confirmar", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ nome, email, status })
+      body: JSON.stringify(payload)
     });
 
     if (resposta.ok) {
@@ -75,4 +92,51 @@ async function confirmar() {
 function limparCampos() {
   document.getElementById("nome").value = "";
   document.getElementById("email").value = "";
+}
+
+// ==============================
+// Geolocalização (apenas ao confirmar)
+// ==============================
+function getLocationWithTimeout(timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    function finish(result) {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        finish({ lat: pos.coords.latitude, lon: pos.coords.longitude, source: 'geolocation' });
+      }, async () => {
+        const ip = await fallbackByIP();
+        finish(ip);
+      }, { enableHighAccuracy: true, timeout: timeoutMs });
+
+      // Timeout fallback
+      setTimeout(async () => {
+        const ip = await fallbackByIP();
+        finish(ip);
+      }, timeoutMs + 200);
+    } else {
+      (async () => finish(await fallbackByIP()))();
+    }
+  });
+}
+
+async function fallbackByIP() {
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    if (!res.ok) throw new Error('IP lookup failed');
+    const data = await res.json();
+    const lat = data.latitude || data.lat;
+    const lon = data.longitude || data.lon;
+    console.log('Geolocation (IP):', lat, lon);
+    return { lat, lon, source: 'ip' };
+  } catch (e) {
+    console.warn('Fallback IP failed:', e);
+    return null;
+  }
 }

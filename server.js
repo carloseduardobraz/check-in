@@ -49,6 +49,17 @@ const initDb = async () => {
         nome TEXT,
         email TEXT,
         status TEXT,
+        lat DOUBLE PRECISION,
+        lon DOUBLE PRECISION,
+        location_source TEXT,
+        data TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS localizacoes (
+        id SERIAL PRIMARY KEY,
+        lat DOUBLE PRECISION,
+        lon DOUBLE PRECISION,
+        source TEXT,
         data TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -63,7 +74,7 @@ initDb();
 // 📌 SALVAR CONFIRMAÇÃO
 // ==============================
 app.post("/confirmar", async (req, res) => {
-  const { nome, email, status } = req.body;
+  const { nome, email, status, lat, lon, location_source } = req.body;
 
   if (!nome || !email) {
     return res.status(400).json({ erro: "Preencha todos os campos" });
@@ -71,8 +82,8 @@ app.post("/confirmar", async (req, res) => {
 
   try {
     await pool.query(
-      "INSERT INTO confirmacoes (nome, email, status) VALUES ($1, $2, $3)",
-      [nome, email, status]
+      "INSERT INTO confirmacoes (nome, email, status, lat, lon, location_source) VALUES ($1, $2, $3, $4, $5, $6)",
+      [nome, email, status, lat || null, lon || null, location_source || null]
     );
     res.json({ sucesso: true });
   } catch (err) {
@@ -185,4 +196,28 @@ app.get("/exportar-json", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+// ==============================
+// 📍 RECEBER GEOLOCALIZAÇÃO
+// ==============================
+app.post("/location", async (req, res) => {
+  const { lat, lon, source } = req.body || {};
+
+  if (lat == null || lon == null) {
+    return res.status(400).json({ erro: "Latitude/longitude faltando" });
+  }
+
+  try {
+    await pool.query(
+      "INSERT INTO localizacoes (lat, lon, source) VALUES ($1, $2, $3)",
+      [lat, lon, source || null]
+    );
+
+    console.log(`Localização recebida: ${lat}, ${lon} (via ${source || 'unknown'})`);
+    res.json({ sucesso: true });
+  } catch (err) {
+    console.error('Erro ao salvar localização:', err);
+    res.status(500).json({ erro: 'Erro ao salvar localização' });
+  }
 });
